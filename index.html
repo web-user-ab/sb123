@@ -1,185 +1,115 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Scratch Project Runner</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8">
+  <title>TurboWarp Recorder</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-        Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      background-color: #f0f2f5;
+      font-family: sans-serif;
       margin: 0;
-      padding: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-    }
-    header {
-      margin: 20px;
-      font-size: 2em;
-      font-weight: bold;
-    }
-    .container {
-      width: 90%;
-      max-width: 800px;
-      background: #fff;
-      border-radius: 12px;
       padding: 20px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      background-color: #f0f0f0;
     }
-    input, button {
-      width: 100%;
+
+    input[type="file"],
+    input[type="text"] {
       padding: 10px;
-      margin-top: 10px;
-      font-size: 1em;
-      border-radius: 8px;
-      border: 1px solid #ccc;
+      font-size: 16px;
+      margin-bottom: 10px;
+      width: 100%;
+      max-width: 600px;
     }
+
     button {
-      background-color: #007aff;
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 5px;
+      background-color: #1976d2;
       color: white;
       border: none;
+      border-radius: 5px;
       cursor: pointer;
     }
+
     button:hover {
-      background-color: #005ecb;
+      background-color: #1565c0;
     }
-    #player-container {
-      margin-top: 20px;
-      width: 100%;
-      aspect-ratio: 4 / 3;
-      background-color: #000;
-      position: relative;
-    }
+
     iframe {
-      width: 100%;
-      height: 100%;
+      margin-top: 20px;
       border: none;
     }
-    .controls {
-      display: flex;
-      gap: 10px;
-      margin-top: 10px;
+
+    #embedError {
+      background-color: #f44336;
+      color: white;
+      padding: 20px;
+      max-width: 600px;
+      margin: 20px auto;
+      display: none;
     }
-    .controls button {
-      flex: 1;
-    }
-    .footer {
-      margin: 20px;
-      font-size: 0.9em;
-      color: #666;
+
+    .container {
+      max-width: 700px;
+      margin: auto;
     }
   </style>
 </head>
 <body>
-  <header>Scratch Project Runner</header>
-  <div class="container">
-    <input type="file" id="fileInput" accept=".sb,.sb2,.sb3" />
-    <input type="text" id="urlInput" placeholder="Enter Scratch project URL (e.g., https://scratch.mit.edu/projects/123456789/)" />
-    <button onclick="loadProject()">Load Project</button>
-    <div class="controls">
-      <button onclick="toggleFullscreen()">Toggle Fullscreen</button>
-      <button onclick="startRecording()">Start Recording</button>
-      <button onclick="stopRecording()">Stop & Download</button>
-    </div>
-    <div id="player-container">
-      <iframe id="player" src="" allowfullscreen></iframe>
-    </div>
-  </div>
-  <div class="footer">
-    Not affiliated with Scratch or Apple. Built with ❤️.
-  </div>
 
-  <script>
-    const player = document.getElementById('player');
-    const fileInput = document.getElementById('fileInput');
-    const urlInput = document.getElementById('urlInput');
-    let mediaRecorder;
-    let recordedChunks = [];
+<div class="container">
+  <input type="file" id="fileInput"><br>
 
-    function loadProject() {
-      const file = fileInput.files[0];
-      const url = urlInput.value.trim();
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = function (e) {
-          const blob = new Blob([e.target.result], { type: file.type });
-          const blobUrl = URL.createObjectURL(blob);
-          player.src = `https://turbowarp.org/editor?project=${blobUrl}`;
-        };
-        reader.readAsArrayBuffer(file);
-      } else if (url) {
-        const match = url.match(/projects\/(\d+)/);
-        if (match) {
-          const id = match[1];
-          player.src = `https://turbowarp.org/${id}`;
-        } else {
-          alert('Please enter a valid Scratch project URL.');
-        }
-      } else {
-        alert('Please select a file or enter a project URL.');
-      }
+  <input type="text" id="projectUrl" placeholder="https://scratch.mit.edu/projects/1158698608/"><br>
+
+  <button onclick="loadProject()">Load Project</button><br>
+
+  <button onclick="toggleFullscreen()">Toggle Fullscreen</button>
+  <button onclick="startRecording()">Start Recording</button>
+  <button onclick="stopRecording()">Stop & Download</button>
+
+  <div id="embedError">Invalid URL. Please use a valid Scratch project link.</div>
+
+  <div id="playerContainer"></div>
+</div>
+
+<script>
+  function loadProject() {
+    const inputUrl = document.getElementById("projectUrl").value.trim();
+    const match = inputUrl.match(/projects\/(\d+)/);
+
+    if (!match) {
+      document.getElementById("embedError").style.display = "block";
+      document.getElementById("playerContainer").innerHTML = "";
+      return;
     }
 
-    function toggleFullscreen() {
-      const iframe = player;
-      if (iframe.requestFullscreen) {
-        iframe.requestFullscreen();
-      } else if (iframe.webkitRequestFullscreen) {
-        iframe.webkitRequestFullscreen();
-      } else if (iframe.msRequestFullscreen) {
-        iframe.msRequestFullscreen();
-      }
-    }
+    const projectId = match[1];
+    const embedUrl = `https://turbowarp.org/${projectId}/embed`;
 
-    function startRecording() {
-      const iframe = player;
-      const iframeWindow = iframe.contentWindow;
-      const iframeDocument = iframe.contentDocument || iframeWindow.document;
-      const canvas = iframeDocument.querySelector('canvas');
-      if (!canvas) {
-        alert('Canvas not found. Please ensure the project is loaded.');
-        return;
-      }
-      const stream = canvas.captureStream(60);
-      mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-      recordedChunks = [];
-      mediaRecorder.ondataavailable = function (e) {
-        if (e.data.size > 0) {
-          recordedChunks.push(e.data);
-        }
-      };
-      mediaRecorder.onstop = function () {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'scratch-recording.webm';
-        a.click();
-        URL.revokeObjectURL(url);
-      };
-      mediaRecorder.start();
-      alert('Recording started.');
-    }
+    document.getElementById("embedError").style.display = "none";
+    document.getElementById("playerContainer").innerHTML = `
+      <iframe id="projectFrame" src="${embedUrl}" width="482" height="412" allowfullscreen allowtransparency="true"></iframe>
+    `;
+  }
 
-    function stopRecording() {
-      if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-        alert('Recording stopped. Downloading...');
-      } else {
-        alert('No recording in progress.');
-      }
+  function toggleFullscreen() {
+    const frame = document.getElementById("projectFrame");
+    if (frame) {
+      if (frame.requestFullscreen) frame.requestFullscreen();
+      else if (frame.webkitRequestFullscreen) frame.webkitRequestFullscreen();
+      else if (frame.msRequestFullscreen) frame.msRequestFullscreen();
     }
+  }
 
-    // Load project from URL parameter if present
-    window.addEventListener('DOMContentLoaded', () => {
-      const params = new URLSearchParams(window.location.search);
-      const projectId = params.get('project');
-      if (projectId) {
-        player.src = `https://turbowarp.org/${projectId}`;
-      }
-    });
-  </script>
+  function startRecording() {
+    alert("Start Recording clicked. (Recording logic not implemented here.)");
+  }
+
+  function stopRecording() {
+    alert("Stop & Download clicked. (Recording logic not implemented here.)");
+  }
+</script>
+
 </body>
 </html>
