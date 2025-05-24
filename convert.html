@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>TurboWarp Auto Embed</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f3f3f3;
+      padding: 2rem;
+      text-align: center;
+    }
+    input, button {
+      padding: 0.5rem;
+      font-size: 1rem;
+      margin: 0.5rem;
+      width: 60%;
+      max-width: 500px;
+    }
+    iframe {
+      margin-top: 2rem;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>TurboWarp Embed Generator</h1>
+  <input type="text" id="scratchUrl" placeholder="Paste Scratch project URL here">
+  <br>
+  <button onclick="embedProject()">Load Project</button>
+
+  <div id="embedArea"></div>
+
+  <script>
+    function embedProject() {
+      const input = document.getElementById("scratchUrl").value;
+      const match = input.match(/projects\/(\d+)/);
+
+      if (!match) {
+        alert("Invalid Scratch project URL!");
+        return;
+      }
+
+      const projectID = match[1];
+      const embedURL = `https://turbowarp.org/${projectID}/embed`;
+
+      document.getElementById("embedArea").innerHTML = `
+        <iframe src="${embedURL}" width="482" height="412" allowtransparency="true" scrolling="no" allowfullscreen></iframe>
+      `;
+    }
+  </script>
+
+</body>
+</html>
