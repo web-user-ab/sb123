@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Scratch Player</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;600&display=swap');
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(to bottom, #f1f3f5, #e3e7eb);
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    header {
+      text-align: center;
+      padding: 2rem;
+      font-size: 2rem;
+      font-weight: 600;
+      color: #111;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
+      width: 90%;
+      max-width: 500px;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    input[type="file"], input[type="text"] {
+      width: 100%;
+      padding: 1rem;
+      margin-top: 1rem;
+      border-radius: 12px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+    }
+
+    button {
+      width: 100%;
+      background: #007aff;
+      color: white;
+      padding: 1rem;
+      border: none;
+      border-radius: 12px;
+      margin-top: 1rem;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #005ecb;
+    }
+
+    iframe {
+      border: none;
+      width: 100%;
+      height: 480px;
+      border-radius: 16px;
+      margin-top: 1rem;
+    }
+
+    .footer {
+      font-size: 0.8rem;
+      color: #999;
+      margin: 2rem auto;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <header>Scratch Runner</header>
+
+  <div class="card">
+    <label for="scratch-file">Upload Scratch File (.sb3, .sb2, .sb):</label>
+    <input type="file" id="scratch-file" accept=".sb3,.sb2,.sb">
+    
+    <label for="scratch-url">Or enter a Scratch Project URL:</label>
+    <input type="text" id="scratch-url" placeholder="https://scratch.mit.edu/projects/123456789/">
+    
+    <button onclick="loadScratch()">Run Project</button>
+
+    <div id="viewer-container"></div>
+  </div>
+
+  <div class="footer">
+    Not affiliated with Scratch or Apple. Built with ❤️.
+  </div>
+
+  <script>
+    function loadScratch() {
+      const fileInput = document.getElementById('scratch-file');
+      const urlInput = document.getElementById('scratch-url').value.trim();
+      const viewer = document.getElementById('viewer-container');
+
+      viewer.innerHTML = '';
+
+      if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const base64 = btoa(e.target.result);
+          const blobUrl = URL.createObjectURL(file);
+          const iframe = document.createElement('iframe');
+          iframe.src = `https://forkphorus.github.io/#project=${blobUrl}`;
+          viewer.appendChild(iframe);
+        };
+        reader.readAsBinaryString(file);
+      } else if (urlInput) {
+        const projectIdMatch = urlInput.match(/projects\/(\d+)/);
+        if (projectIdMatch) {
+          const id = projectIdMatch[1];
+          const iframe = document.createElement('iframe');
+          iframe.src = `https://forkphorus.github.io/#project=${id}`;
+          viewer.appendChild(iframe);
+        } else {
+          alert("Invalid URL. Make sure it looks like https://scratch.mit.edu/projects/123456789/");
+        }
+      } else {
+        alert("Please select a file or enter a Scratch project URL.");
+      }
+    }
+  </script>
+</body>
+</html>
