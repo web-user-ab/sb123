@@ -2,20 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Scratch Player</title>
+  <title>Scratch Runner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@400;600&display=swap');
 
-    * {
-      box-sizing: border-box;
-    }
-
     body {
-      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: linear-gradient(to bottom, #f1f3f5, #e3e7eb);
       margin: 0;
       padding: 0;
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(to bottom, #f0f2f5, #dce1e6);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -23,63 +19,67 @@
     }
 
     header {
-      text-align: center;
-      padding: 2rem;
+      padding: 2rem 1rem;
       font-size: 2rem;
       font-weight: 600;
-      color: #111;
     }
 
     .card {
       background: #fff;
-      border-radius: 20px;
-      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05);
-      width: 90%;
-      max-width: 500px;
+      border-radius: 24px;
       padding: 1.5rem;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+      max-width: 600px;
+      width: 90%;
       margin-bottom: 2rem;
     }
 
-    input[type="file"], input[type="text"] {
+    input, button {
       width: 100%;
-      padding: 1rem;
       margin-top: 1rem;
+      padding: 1rem;
       border-radius: 12px;
       border: 1px solid #ccc;
       font-size: 1rem;
     }
 
     button {
-      width: 100%;
       background: #007aff;
       color: white;
-      padding: 1rem;
       border: none;
-      border-radius: 12px;
-      margin-top: 1rem;
-      font-size: 1rem;
-      font-weight: bold;
+      font-weight: 600;
       cursor: pointer;
-      transition: background 0.3s;
+      transition: background 0.3s ease;
     }
 
     button:hover {
       background: #005ecb;
     }
 
-    iframe {
-      border: none;
+    #player-container {
+      margin-top: 2rem;
       width: 100%;
-      height: 480px;
+      aspect-ratio: 4 / 3;
+      background: #000;
       border-radius: 16px;
-      margin-top: 1rem;
+      overflow: hidden;
     }
 
     .footer {
-      font-size: 0.8rem;
-      color: #999;
-      margin: 2rem auto;
       text-align: center;
+      color: #aaa;
+      font-size: 0.8rem;
+      margin-bottom: 2rem;
+    }
+
+    #controls {
+      display: flex;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    #controls button {
+      flex: 1;
     }
   </style>
 </head>
@@ -87,52 +87,92 @@
   <header>Scratch Runner</header>
 
   <div class="card">
-    <label for="scratch-file">Upload Scratch File (.sb3, .sb2, .sb):</label>
-    <input type="file" id="scratch-file" accept=".sb3,.sb2,.sb">
-    
-    <label for="scratch-url">Or enter a Scratch Project URL:</label>
-    <input type="text" id="scratch-url" placeholder="https://scratch.mit.edu/projects/123456789/">
-    
-    <button onclick="loadScratch()">Run Project</button>
+    <input type="file" id="fileInput" accept=".sb,.sb2,.sb3">
+    <input type="text" id="urlInput" placeholder="Or paste a Scratch project URL">
+    <button onclick="loadProject()">Run Project</button>
 
-    <div id="viewer-container"></div>
+    <div id="controls">
+      <button onclick="startRecording()">🎥 Start Recording</button>
+      <button onclick="stopRecording()">⏹ Stop & Download</button>
+    </div>
+
+    <div id="player-container"></div>
   </div>
 
   <div class="footer">
-    Not affiliated with Scratch or Apple. Built with ❤️.
+    Built with ❤️ using forkphorus & MediaRecorder.<br>
+    Not affiliated with Apple or Scratch.
   </div>
 
+  <script src="https://forkphorus.github.io/forkphorus.js"></script>
   <script>
-    function loadScratch() {
-      const fileInput = document.getElementById('scratch-file');
-      const urlInput = document.getElementById('scratch-url').value.trim();
-      const viewer = document.getElementById('viewer-container');
+    let recorder, recordedChunks = [], canvasStream, audioStream, combinedStream;
 
-      viewer.innerHTML = '';
+    async function loadProject() {
+      const fileInput = document.getElementById('fileInput');
+      const url = document.getElementById('urlInput').value.trim();
+      const container = document.getElementById('player-container');
+      container.innerHTML = "";
+
+      const app = forkphorus.createPlayer();
+      app.setAutoStart(true);
+      container.appendChild(app.root);
 
       if (fileInput.files.length > 0) {
         const file = fileInput.files[0];
-        const reader = new FileReader();
-        reader.onload = function(e) {
-          const base64 = btoa(e.target.result);
-          const blobUrl = URL.createObjectURL(file);
-          const iframe = document.createElement('iframe');
-          iframe.src = `https://forkphorus.github.io/#project=${blobUrl}`;
-          viewer.appendChild(iframe);
-        };
-        reader.readAsBinaryString(file);
-      } else if (urlInput) {
-        const projectIdMatch = urlInput.match(/projects\/(\d+)/);
-        if (projectIdMatch) {
-          const id = projectIdMatch[1];
-          const iframe = document.createElement('iframe');
-          iframe.src = `https://forkphorus.github.io/#project=${id}`;
-          viewer.appendChild(iframe);
+        const buffer = await file.arrayBuffer();
+        await app.loadProject(buffer);
+      } else if (url) {
+        const match = url.match(/projects\/(\d+)/);
+        if (match) {
+          const id = match[1];
+          await app.loadProjectFromId(id);
         } else {
-          alert("Invalid URL. Make sure it looks like https://scratch.mit.edu/projects/123456789/");
+          alert("Invalid Scratch project URL");
         }
       } else {
-        alert("Please select a file or enter a Scratch project URL.");
+        alert("Upload a file or paste a URL");
+      }
+    }
+
+    function startRecording() {
+      const canvas = document.querySelector("canvas");
+      if (!canvas) return alert("No project loaded.");
+
+      canvasStream = canvas.captureStream(60); // 60 fps
+      const audioCtx = forkphorus.audio.context;
+      const dest = audioCtx.createMediaStreamDestination();
+      forkphorus.audio.output.connect(dest);
+      audioStream = dest.stream;
+
+      combinedStream = new MediaStream([...canvasStream.getTracks(), ...audioStream.getTracks()]);
+
+      recorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm; codecs=vp9' });
+      recordedChunks = [];
+
+      recorder.ondataavailable = e => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "scratch-recording.webm";
+        a.click();
+      };
+
+      recorder.start();
+      alert("Recording started!");
+    }
+
+    function stopRecording() {
+      if (recorder && recorder.state === "recording") {
+        recorder.stop();
+        alert("Recording stopped. Downloading...");
+      } else {
+        alert("Not recording.");
       }
     }
   </script>
